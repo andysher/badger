@@ -84,6 +84,13 @@ computer, enabling custom `icon.png` menu icons on stock badges, and the
 [README](./.github/skills/hyb26-skill/README.md) to install it for other
 projects.
 
+The same skill is available for [Claude Code](https://code.claude.com/docs) in
+[`.claude/skills/hyb26-skill`](./.claude/skills/hyb26-skill/SKILL.md), with
+project instructions in [`CLAUDE.md`](./CLAUDE.md). Claude Code picks both up
+automatically when you run `claude` in this repository. See
+[Building badge apps with Claude](./docs/building-apps-with-claude.md) for a
+step-by-step guide.
+
 ## Creating a 2026 app
 
 Apps are directories under `badge/apps/`:

@@ -1,0 +1,37 @@
+Install HYB26-skill for Claude Code
+
+IN THIS REPOSITORY
+
+Nothing to install. Claude Code discovers .claude/skills/hyb26-skill when you
+run `claude` in a badger/home checkout. Tools run from
+.claude/skills/hyb26-skill/scripts.
+
+PERSONAL INSTALL (any project)
+
+1. Install Python 3.10 or newer and check it:
+       python3 --version          (Windows: python --version)
+
+2. From this skill folder run:
+       sh ./install-skill.sh      (macOS / Linux)
+       .\install-skill.ps1        (Windows PowerShell)
+
+3. The skill is copied to ~/.claude/skills/hyb26-skill. In Claude Code type
+   /skills to check it is listed (restart Claude Code if it is not). Rerun
+   the installer to update; unrelated files are kept.
+
+4. Install mpremote to talk to a badge:
+       python3 -m pip install mpremote     (Windows: python -m pip install mpremote)
+   Use a virtual environment if the system Python refuses packages.
+
+5. Open your badge project folder (a plain folder is fine) and start `claude`
+   there before asking for an app. Do not use the skill folder as the project.
+
+CHECK THE RESULT
+
+Ask Claude:
+       Use hyb26-skill to explain how to put my badge into USB Disk Mode and
+       show my app's icon in the menu. Do not change any files.
+
+The answer should mention badge_serial.py disk-mode (or
+powman.reset_into_msc()), the Mass Storage app, double-tapping RESET, and
+patch_menu_icons.py for menus that ignore icon.png.
