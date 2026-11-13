@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 badge/.badge_state/**
 badge25/.badge_state/**
+
+# Personal badge files (custom startup screen); never commit
+/my-badge/
