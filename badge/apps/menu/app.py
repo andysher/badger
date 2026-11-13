@@ -7,6 +7,9 @@ import ui
 from gallery import GALLERY, crop, load_photo, tile_path
 from icons import ICONS
 
+# False hides the built-in "Mona's Expedition" achievements tile (no tile, no IR listening)
+SHOW_ACHIEVEMENTS = False
+
 TILES_PER_ROW = 4
 
 APP_ORDER = (
@@ -183,6 +186,18 @@ class Tile:
         return True
 
 
+class NoAchievements:
+    # stands in for achievements.Achievements when SHOW_ACHIEVEMENTS is False,
+    # so __init__.py's listen() / close() / pending checks do nothing
+    pending = None
+
+    def listen(self):
+        pass
+
+    def close(self):
+        pass
+
+
 class App(Tile):
     def __init__(self, ordinal, name, slug, path, animated=False):
         self.name = name
@@ -342,20 +357,25 @@ class Apps:
             icon_key = slug if slug in ICONS else "default"
             tiles.append(App(len(tiles), name, slug, path, icon_key in animated))
 
-        from achievements import POSITION, Achievements, AchievementsTile
-        self.achievements = Achievements()
-        self.achievements_tile = AchievementsTile(self.achievements)
         self.picker = None
-        tiles.insert(min(POSITION, len(tiles)), self.achievements_tile)
+        if SHOW_ACHIEVEMENTS:
+            from achievements import POSITION, Achievements, AchievementsTile
+            self.achievements = Achievements()
+            self.achievements_tile = AchievementsTile(self.achievements)
+            tiles.insert(min(POSITION, len(tiles)), self.achievements_tile)
+        else:
+            self.achievements = NoAchievements()
+            self.achievements_tile = None
 
         for name, columns, rows, position, frame in GALLERY:
             if file_exists(tile_path(name)):
                 tiles.insert(min(position, len(tiles)), Photo(name, columns, rows, frame))
 
         self.apps = self.pack(tiles)
-        boundary = self.achievements_tile.row + self.achievements_tile.rows
+        # without the achievements tile there is no picker, so no tile sits below it
+        boundary = self.achievements_tile.row + self.achievements_tile.rows if self.achievements_tile is not None else None
         # (tile, first row, row after its last, below the picker) for the draw loop
-        self.layout = [(tile, tile.row, tile.row + tile.rows, tile.row >= boundary) for tile in self.apps]
+        self.layout = [(tile, tile.row, tile.row + tile.rows, boundary is not None and tile.row >= boundary) for tile in self.apps]
         self.want_column = 0
         self.want_row = 0
         self.photos = [tile for tile in self.apps if isinstance(tile, Photo)]
@@ -366,6 +386,8 @@ class Apps:
     def preload_images(self):
         for photo in self.photos:
             photo.load()
+        if self.achievements_tile is None:
+            return
         from achievements import preload_images
         preload_images(self.achievements)
 
@@ -443,6 +465,8 @@ class Apps:
             row += direction
 
     def open_picker(self, index=None):
+        if self.achievements_tile is None:
+            return
         from achievements import Picker
         achievements = self.achievements
         if index is None:
