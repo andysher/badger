@@ -13,6 +13,7 @@ SHOW_ACHIEVEMENTS = False
 TILES_PER_ROW = 4
 
 APP_ORDER = (
+    "tiny_touch",
     "badge",
     "contacts",
     "mona_paint",
