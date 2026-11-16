@@ -1,12 +1,12 @@
 """Tiny Touch: a gentle touch-and-tilt playground for 18-24 month olds.
 
-Three activities share one shell:
+Launching shows a picker with three activities:
   0  Color Splash      (splash.py)
   1  Peekaboo Animals  (peekaboo.py)
   2  Tilt & Tumble     (tumble.py)
 
-Grown-ups switch activity by holding BACK and MENU together for 1.5 seconds.
-Every other touch belongs to the toddler.
+UP/DOWN choose, SELECT starts. A grown-up holds BACK for 3.5 seconds inside an
+activity to return to the picker. Every other touch belongs to the toddler.
 """
 
 import gc
@@ -19,12 +19,13 @@ sys.path.insert(0, APP_DIR)
 
 from badgeware import State
 
-from common import Input, lights, WHITE, clamp
+from common import Input, lights, WHITE, NIGHT, RAINBOW, clamp
 
 badge.mode(HIRES | VSYNC)
 
 ACTIVITIES = ("splash", "peekaboo", "tumble")
-SWITCH_HOLD_MS = 1500
+NAMES = ("Color Splash", "Peekaboo Animals", "Tilt & Tumble")
+BACK_HOLD_MS = 3500
 
 state = {"activity": 0}
 State.load("tiny_touch", state)
@@ -33,41 +34,50 @@ if not isinstance(state.get("activity"), int) or not 0 <= state["activity"] < le
 
 inp = Input()
 current = None
-switch_started = None
+back_started = None
+selected = state["activity"]  # picker highlight, pre-set to the last-played game
+in_picker = True
 
 
 def load_activity(index):
+    global current
+    unload_activity()
+    module = __import__(ACTIVITIES[index])
+    current = module.Activity()
+    current.enter()
+    state["activity"] = index
+    State.save("tiny_touch", state)
+
+
+def unload_activity():
     global current
     if current is not None:
         current.exit()
         current = None
         lights.off()
         gc.collect()
-    module = __import__(ACTIVITIES[index])
-    current = module.Activity()
-    current.enter()
-    state["activity"] = index
 
 
-def parent_switch():
-    """Return 0..1 progress of the BACK+MENU hold, switching when it completes."""
-    global switch_started
-    if badge.held(BUTTON_BACK) and badge.held(BUTTON_MENU):
-        if switch_started is None:
-            switch_started = inp.now
-        progress = (inp.now - switch_started) / SWITCH_HOLD_MS
+def back_progress():
+    """Return 0..1 progress of the BACK hold, leaving the game when it completes."""
+    global back_started, in_picker, selected
+    if badge.held(BUTTON_BACK):
+        if back_started is None:
+            back_started = inp.now
+        progress = (inp.now - back_started) / BACK_HOLD_MS
         if progress >= 1.0:
-            switch_started = None
-            load_activity((state["activity"] + 1) % len(ACTIVITIES))
-            State.save("tiny_touch", state)
+            back_started = None
+            selected = state["activity"]
+            unload_activity()
+            in_picker = True
             return 0.0
         return progress
-    switch_started = None
+    back_started = None
     return 0.0
 
 
-def draw_switch_hint(progress):
-    # A small ring that fills while a grown-up holds BACK + MENU.
+def draw_back_hint(progress):
+    # A small ring that fills while a grown-up holds BACK.
     if progress <= 0.15:
         return
     cx, cy, r = screen.width - 18, 18, 11
@@ -78,15 +88,67 @@ def draw_switch_hint(progress):
     screen.shape(shape.pie(cx, cy, r, 0, angle))
 
 
-load_activity(state["activity"])
+def update_picker():
+    global selected, in_picker
+    if badge.pressed(BUTTON_UP):
+        selected = (selected - 1) % len(ACTIVITIES)
+    elif badge.pressed(BUTTON_DOWN):
+        selected = (selected + 1) % len(ACTIVITIES)
+    elif badge.pressed(BUTTON_SELECT):
+        in_picker = False
+        load_activity(selected)
+        return
+    draw_picker()
+
+
+def draw_picker():
+    w, h = screen.width, screen.height
+    screen.pen = NIGHT
+    screen.rectangle(screen.clip)
+    screen.font = font.sins
+    screen.pen = WHITE
+    title = "Tiny Touch"
+    tw, th = screen.measure_text(title)
+    screen.text(title, (w - tw) // 2, 10)
+
+    count = len(ACTIVITIES)
+    top = 10 + th + 14
+    gap = 10
+    row_h = clamp((h - top - 24 - gap * (count - 1)) // count, 24, 44)
+    row_w = w - 40
+    x = 20
+    for i in range(count):
+        y = top + i * (row_h + gap)
+        accent = RAINBOW[(i * 2 + 4) % len(RAINBOW)]
+        if i == selected:
+            screen.pen = accent
+            screen.shape(shape.rounded_rectangle(x - 4, y - 4, row_w + 8, row_h + 8, 8))
+        screen.pen = color.rgb(40, 44, 78)
+        screen.shape(shape.rounded_rectangle(x, y, row_w, row_h, 6))
+        screen.pen = WHITE if i == selected else color.rgb(160, 166, 200)
+        name = NAMES[i]
+        nw, nh = screen.measure_text(name)
+        screen.text(name, x + (row_w - nw) // 2, y + (row_h - nh) // 2)
+
+    screen.font = font.nope
+    screen.pen = color.rgb(150, 156, 190)
+    hint = "UP/DOWN choose   SELECT play"
+    hw, hh = screen.measure_text(hint)
+    screen.text(hint, (w - hw) // 2, h - hh - 6)
 
 
 def update():
+    global back_started
     inp.read()
-    progress = parent_switch()
+    if in_picker:
+        update_picker()
+        return
+    progress = back_progress()
+    if in_picker:
+        return
     current.update(inp)
     current.draw()
-    draw_switch_hint(progress)
+    draw_back_hint(progress)
     lights.update(inp.dt)
 
 
