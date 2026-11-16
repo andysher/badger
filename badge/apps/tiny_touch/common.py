@@ -58,18 +58,15 @@ RAINBOW = (RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE, PINK)
 SHAKE_THRESHOLD_G = 0.6
 SHAKE_COOLDOWN_MS = 700
 
-# Tilt axis mapping from raw IMU axes to screen axes, calibrated on a real
-# badge: held upright (screen facing you) raw Y read about -13400, and tilting
-# the right edge down drove raw X from about -1100 to -10800. So tilt_x > 0
-# when the right edge is lower, and tilt_y ~ +0.8 when held upright (gravity
-# pulls towards the bottom of the screen).
-#
-# These raw axes are fixed to the circuit board, but the firmware auto-rotates
-# the display 180 degrees when the badge is turned upside down. While it is
-# rotated, screen X and Y both point the opposite way to the board axes, so
-# Input.read() negates both tilt values (see screen_rotated()).
-TILT_X_AXIS, TILT_X_SIGN = 0, -1
-TILT_Y_AXIS, TILT_Y_SIGN = 1, -1
+# Tilt axis mapping from raw IMU axes to screen axes, measured on a real badge.
+# The signs are for the UN-rotated display (rotate_180() False), where gravity
+# pointing down the screen reads raw Y about +13100. On this badge the usual
+# screen-facing-you position is the firmware's rotated state (rotate_180()
+# True, raw Y about -13400; tilting the right edge down moved raw X from about
+# -1100 to -10800). Input.read() negates both values while rotated, so
+# tilt_x/tilt_y always follow the displayed screen (tilt_y ~ +0.8 held still).
+TILT_X_AXIS, TILT_X_SIGN = 0, 1
+TILT_Y_AXIS, TILT_Y_SIGN = 1, 1
 
 
 def clamp(value, low, high):
