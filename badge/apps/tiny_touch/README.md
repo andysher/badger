@@ -18,9 +18,13 @@ instant, cheerful reaction.
 
 ## For grown-ups
 
-- **Switch activity**: hold **BACK** and **MENU** together for 1.5 seconds. A
-  small ring fills in the top-right corner, then the next activity starts. The
-  app remembers the last activity.
+- **Choose an activity**: when Tiny Touch opens, a picker lists the three
+  activities. Press **UP** or **DOWN** to move the highlight and **SELECT** to
+  start. The picker remembers the last activity you played and highlights it
+  next time (it is always shown at launch).
+- **Back to the picker**: hold **BACK** for 3.5 seconds. A small ring fills in
+  the top-right corner, then the picker returns. A quick tap of BACK is still
+  just a purple toddler touch.
 - **HOME** returns to the badge menu. Toddlers may touch it by accident; just
   open Tiny Touch again.
 - The badge has no speaker, so you provide the sounds.

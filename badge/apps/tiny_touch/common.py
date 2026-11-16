@@ -63,12 +63,31 @@ SHAKE_COOLDOWN_MS = 700
 # the right edge down drove raw X from about -1100 to -10800. So tilt_x > 0
 # when the right edge is lower, and tilt_y ~ +0.8 when held upright (gravity
 # pulls towards the bottom of the screen).
+#
+# These raw axes are fixed to the circuit board, but the firmware auto-rotates
+# the display 180 degrees when the badge is turned upside down. While it is
+# rotated, screen X and Y both point the opposite way to the board axes, so
+# Input.read() negates both tilt values (see screen_rotated()).
 TILT_X_AXIS, TILT_X_SIGN = 0, -1
 TILT_Y_AXIS, TILT_Y_SIGN = 1, -1
 
 
 def clamp(value, low, high):
     return low if value < low else high if value > high else value
+
+
+def screen_rotated():
+    """True while the firmware is drawing the display rotated 180 degrees.
+
+    badge.rotate_180() reports the rotation actually applied to the screen
+    (the same getter mona_paint and merge_conflict use), so tilt stays in step
+    with what is drawn even through the firmware's hysteresis. Fall back to
+    badge.upside_down(), then to upright, on runtimes without it."""
+    rotate = getattr(badge, "rotate_180", None)
+    if rotate is not None:
+        return bool(rotate())
+    upside_down = getattr(badge, "upside_down", None)
+    return bool(upside_down()) if upside_down is not None else False
 
 
 class Input:
@@ -80,8 +99,9 @@ class Input:
         pressed    tuple of PLAY_PADS newly touched this frame
         held       tuple of PLAY_PADS currently touched
         any        True if any play pad was newly touched this frame
-        tilt_x     -1..1, positive when the right edge is lower
-        tilt_y     -1..1, positive when the bottom edge is lower
+        tilt_x     -1..1, positive when the screen's right edge is lower
+        tilt_y     -1..1, positive when the screen's bottom edge is lower
+                   (both follow the displayed screen, upright or upside down)
         shake      True on the frame a shake is detected
     """
 
@@ -105,8 +125,9 @@ class Input:
 
         raw = badge.imu()
         accel = raw[:3]
-        self.tilt_x = clamp(TILT_X_SIGN * accel[TILT_X_AXIS] / ONE_G, -1.0, 1.0)
-        self.tilt_y = clamp(TILT_Y_SIGN * accel[TILT_Y_AXIS] / ONE_G, -1.0, 1.0)
+        flip = -1 if screen_rotated() else 1
+        self.tilt_x = clamp(flip * TILT_X_SIGN * accel[TILT_X_AXIS] / ONE_G, -1.0, 1.0)
+        self.tilt_y = clamp(flip * TILT_Y_SIGN * accel[TILT_Y_AXIS] / ONE_G, -1.0, 1.0)
 
         magnitude = math.sqrt(accel[0] * accel[0] + accel[1] * accel[1] + accel[2] * accel[2]) / ONE_G
         self.shake = False
