@@ -54,15 +54,39 @@ WHITE = (255, 255, 255)
 
 PIC = 64                 # picture size from the asset contract
 PIC_X = 90               # picture top-left when at rest
-PIC_Y = 6
+PIC_Y = 10               # leaves headroom above for the idle bob and jump
 PIC_CX = PIC_X + PIC // 2
 PIC_BOTTOM = PIC_Y + PIC
+BOB = 2.0                # idle bob amplitude (pixels)
+JUMP_LIFT = 6.0          # jump height; with JUMP_STRETCH keeps the top on screen
+JUMP_STRETCH = 0.03      # vertical stretch at the top of the jump
+JUMP_CROUCH = 0.14       # squash before take-off, so the small hop reads as a jump
 
 LETTER_BOX = (4, 4, 82, 70)      # x, y, w, h for "A a"
 LETTER_SIZE = 72
 WORD_PILL = (4, 80, 152, 36)     # x, y, w, h, white rounded pill for the word
 WORD_SIZE = 30
 WORD_PAD = 8
+
+# DynaPuff-Medium glyph metrics, as fractions of the font size, measured from
+# the y passed to screen.text(). measure_text() only reports the font size as
+# the height, so it cannot be used to place text vertically. These were
+# measured by rendering glyphs and reading pixels back in the badger.github.io
+# simulator's build of the firmware text renderer (sizes 30, 60 and 100); they
+# have NOT been confirmed on a physical badge.
+ASCENDER_TOP = 0.40      # top of b d f k l
+CAP_TOP = 0.44           # top of capitals (H 0.433, A G J S 0.45, O 0.467)
+X_TOP = 0.533            # top of x, o, a
+BASELINE = 1.00          # baseline (Q's tail dips ~0.017 below)
+DESCENDER = 1.15         # bottom of g j p q y
+
+# One baseline for every word: the band from cap top to descender bottom is
+# centred in the pill at the full WORD_SIZE. Shrunk words keep this baseline.
+WORD_BASELINE = round(
+    WORD_PILL[1]
+    + (WORD_PILL[3] - (DESCENDER - CAP_TOP) * WORD_SIZE) / 2
+    + (BASELINE - CAP_TOP) * WORD_SIZE
+)
 
 TRANSITION_MS = 320
 ACTION_MS = 600
@@ -175,7 +199,9 @@ class Layout:
         self.first = self.word[:1]
         self.rest = self.word[1:]
 
-        # "A a": shrink until both letters fit the letter box.
+        # "A a": shrink until both letters fit the letter box. With the vector
+        # font the ink height (ascender top to descender bottom) is checked
+        # from the measured metrics, not from measure_text()'s height.
         bx, by, bw, bh = LETTER_BOX
         size = LETTER_SIZE
         for _ in range(8):
@@ -183,15 +209,21 @@ class Layout:
             lw, lh = measure(self.lower, size)
             gap = size * 0.12
             total = uw + gap + lw
-            height = max(uh, lh)
+            height = (DESCENDER - ASCENDER_TOP) * size if VECTOR else max(uh, lh)
             if total <= bw and height <= bh:
                 break
             size *= min(bw / max(total, 1), bh / max(height, 1)) * 0.98
         self.letter_size = size
         self.upper_x = bx + (bw - total) / 2
         self.lower_x = self.upper_x + uw + gap
-        self.upper_y = by + (bh - uh) / 2
-        self.lower_y = by + (bh - lh) / 2
+        if VECTOR:
+            # Capitals centred in the box; both letters share one baseline, so
+            # lowercase descenders (g j p q y) hang below it, clear of the pill.
+            baseline = by + bh / 2 + (BASELINE - CAP_TOP) * size / 2
+            self.upper_y = self.lower_y = baseline - BASELINE * size
+        else:
+            self.upper_y = by + (bh - uh) / 2
+            self.lower_y = by + (bh - lh) / 2
 
         # Word: shrink to fit inside the white pill.
         px, py, pw, ph = WORD_PILL
@@ -200,14 +232,17 @@ class Layout:
             fw, fh = measure(self.first, size)
             rw, rh = measure(self.rest, size) if self.rest else (0, 0)
             total = fw + rw
-            height = max(fh, rh)
+            height = (DESCENDER - ASCENDER_TOP) * size if VECTOR else max(fh, rh)
             if total <= pw - 2 * WORD_PAD and height <= ph - 4:
                 break
             size *= min((pw - 2 * WORD_PAD) / max(total, 1), (ph - 4) / max(height, 1)) * 0.98
         self.word_size = size
         self.first_x = px + (pw - total) / 2
         self.rest_x = self.first_x + fw
-        self.word_y = py + (ph - height) / 2
+        if VECTOR:
+            self.word_y = WORD_BASELINE - BASELINE * size
+        else:
+            self.word_y = py + (ph - height) / 2
         self.word_w = total
 
 
@@ -306,7 +341,7 @@ def handle_input():
 
 def picture_motion(now):
     """Return (dx, dy, scale_x, scale_y) for the picture this frame."""
-    dy = math.sin(now / 650) * 2.0          # gentle idle bob
+    dy = math.sin(now / 650) * BOB          # gentle idle bob
     dx = 0.0
     sx = sy = 1.0
 
@@ -320,10 +355,18 @@ def picture_motion(now):
         t = (now - action_at) / ACTION_MS
         if 0.0 <= t < 1.0:
             if action == "jump":
-                dy -= 16 * math.sin(math.pi * t)
-                squash = 0.12 * math.sin(math.pi * t)
-                sx *= 1.0 - squash
-                sy *= 1.0 + squash
+                # Quick crouch, then a small hop. The picture sits near the
+                # top of the screen, so the hop is kept small enough that it
+                # never leaves the screen (see JUMP_LIFT).
+                if t < 0.2:
+                    crouch = JUMP_CROUCH * math.sin(math.pi * t / 0.2)
+                    sx *= 1.0 + crouch * 0.6
+                    sy *= 1.0 - crouch
+                else:
+                    hop = math.sin(math.pi * (t - 0.2) / 0.8)
+                    dy -= JUMP_LIFT * hop
+                    sx *= 1.0 - JUMP_STRETCH * hop
+                    sy *= 1.0 + JUMP_STRETCH * hop
             elif action == "squish":
                 squash = 0.25 * math.sin(math.pi * t)
                 sx *= 1.0 + squash * 0.8
@@ -341,7 +384,7 @@ def draw_picture(now, offset):
     w = PIC * sx
     h = PIC * sy
     x = PIC_CX - w / 2 + dx + offset
-    y = PIC_BOTTOM - h + dy
+    y = max(0.0, PIC_BOTTOM - h + dy)      # never clip off the top edge
     picture = pictures.get(letter, MISSING)
     if picture is MISSING or picture is None:
         # Friendly soft blob where the picture would be.
@@ -374,11 +417,9 @@ def draw_word(offset):
     if layout.rest:
         pen(INK)
         write(layout.rest, layout.rest_x + offset, layout.word_y, layout.word_size)
-    # Underline the highlighted first letter.
-    fw, _ = measure(layout.first, layout.word_size)
-    pen(accent)
-    screen.shape(shape.rounded_rectangle(
-        int(layout.first_x + offset), py + ph - 7, max(4, int(fw)), 3, 1))
+    # No underline: the accent colour highlights the first letter. An
+    # underline under a narrow "I" read as "!" and crowded Q's tail and the
+    # descenders of the next letter (y, p) in the simulator.
 
 
 def update_lights(dt):
