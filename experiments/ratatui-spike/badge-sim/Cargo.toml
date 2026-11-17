@@ -1,0 +1,14 @@
+[package]
+name = "badge-sim"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+window = ["embedded-graphics-simulator/with-sdl"]
+
+[dependencies]
+badge-tui = { path = "../badge-tui" }
+ratatui = { version = "0.30", default-features = false }
+mousefood = "0.5"
+embedded-graphics-simulator = { version = "0.8", default-features = false }
