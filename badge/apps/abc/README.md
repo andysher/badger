@@ -22,9 +22,9 @@ letter you were on is remembered the next time ABC opens. The badge has no
 speaker, so grown-ups say the letters and words; the case lights glow softly
 when the letter changes.
 
-Words: Apple, Ball, Cat, Dog, Elephant, Fish, Grapes, Hat, Ice cream, Juice,
-Kite, Lion, Moon, Nose, Octopus, Pig, Queen, Rabbit, Sun, Tree, Umbrella,
-Violin, Whale, Xylophone, Yo-yo, Zebra.
+Words: Apple, Ball, Cat, Dog, Elephant, Fish, Goat, Horse, Ink pen, Juice,
+Kite, Lion, Monkey, Nose, Oranges, Pig, Queen, Rabbit, Sun, Tree, Umbrella,
+Violin, Watch, Xylophone, Yo-yo, Zebra.
 
 ## Hardware
 

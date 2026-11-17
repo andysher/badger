@@ -24,9 +24,9 @@ screen.antialias = image.X2
 # Content
 
 WORDS = (
-    "Apple", "Ball", "Cat", "Dog", "Elephant", "Fish", "Grapes", "Hat",
-    "Ice cream", "Juice", "Kite", "Lion", "Moon", "Nose", "Octopus", "Pig",
-    "Queen", "Rabbit", "Sun", "Tree", "Umbrella", "Violin", "Whale",
+    "Apple", "Ball", "Cat", "Dog", "Elephant", "Fish", "Goat", "Horse",
+    "Ink pen", "Juice", "Kite", "Lion", "Monkey", "Nose", "Oranges", "Pig",
+    "Queen", "Rabbit", "Sun", "Tree", "Umbrella", "Violin", "Watch",
     "Xylophone", "Yo-yo", "Zebra",
 )
 COUNT = len(WORDS)
