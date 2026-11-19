@@ -28,18 +28,39 @@ def _hand(cx, cy):
     screen.shape(shape.line(cx - 8, cy + 4, cx + 20, cy + 4, 2))          # knuckle crease
 
 
+def _poly(cx, cy, points):
+    screen.shape(shape.custom([vec2(cx + x, cy + y) for x, y in points]))
+
+
 def _book(cx, cy):
-    """An open book: one dot on the left page, two on the right."""
+    """An open book seen from the front: pages dip into a centre spine, a
+    stack of page edges and the cover show underneath, a ribbon hangs down.
+    One dot on the left page, two on the right."""
+    # Ribbon bookmark (drawn first so the book overlaps its top).
+    _pen((220, 40, 60))
+    _poly(cx, cy, ((3, 30), (15, 30), (15, 56), (9, 50), (3, 56)))
+    # Cover.
     _pen((190, 80, 20))
-    screen.shape(shape.rounded_rectangle(cx - 58, cy - 38, 116, 78, 8))
+    _poly(cx, cy, ((-62, -24), (0, -14), (62, -24), (62, 34), (0, 44), (-62, 34)))
+    # Page stack: cream edges peeking out below the top pages.
+    _pen((236, 226, 200))
+    _poly(cx, cy, ((-57, -30), (0, -20), (57, -30), (57, 29), (0, 39), (-57, 29)))
+    _pen((205, 190, 160))
+    screen.shape(shape.line(cx - 55, cy + 26, cx, cy + 35, 1))
+    screen.shape(shape.line(cx + 55, cy + 26, cx, cy + 35, 1))
+    # Top pages.
     _pen((255, 255, 255))
-    screen.shape(shape.rounded_rectangle(cx - 54, cy - 34, 52, 70, 5))
-    screen.shape(shape.rounded_rectangle(cx + 2, cy - 34, 52, 70, 5))
+    _poly(cx, cy, ((-55, -36), (-1, -26), (-1, 31), (-55, 21)))
+    _poly(cx, cy, ((1, -26), (55, -36), (55, 21), (1, 31)))
+    # Spine shadow.
+    _pen((200, 190, 175))
+    screen.shape(shape.line(cx, cy - 26, cx, cy + 31, 2))
+    # Counting dots: 1 on the left page, 2 on the right.
     _pen((235, 70, 90))
-    screen.shape(shape.circle(cx - 28, cy, 8))
+    screen.shape(shape.circle(cx - 28, cy - 3, 8))
     _pen((50, 130, 240))
-    screen.shape(shape.circle(cx + 18, cy - 12, 8))
-    screen.shape(shape.circle(cx + 38, cy + 12, 8))
+    screen.shape(shape.circle(cx + 19, cy - 12, 8))
+    screen.shape(shape.circle(cx + 37, cy + 7, 8))
 
 
 def draw_picker(now, selected, remaining):
